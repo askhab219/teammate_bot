@@ -27,10 +27,9 @@
             align-items: center;
             min-height: 100vh;
             box-sizing: border-box;
-            padding-bottom: 80px; /* Отступ для нижней панели меню */
+            padding-bottom: 80px;
         }
 
-        /* Контейнер приложения */
         .app-container {
             width: 100%;
             max-width: 420px;
@@ -41,7 +40,6 @@
             flex-grow: 1;
         }
 
-        /* Шапка */
         .header {
             text-align: center;
             margin-bottom: 24px;
@@ -62,7 +60,6 @@
             margin: 0;
         }
 
-        /* Экраны */
         .screen {
             display: none;
             flex-direction: column;
@@ -79,7 +76,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Элементы форм */
         .form-group {
             margin-bottom: 18px;
         }
@@ -109,7 +105,6 @@
             border-color: var(--button-color);
         }
 
-        /* Карточка игрока (Экран Поиска) */
         .card-wrapper {
             position: relative;
             flex-grow: 1;
@@ -187,7 +182,6 @@
             min-height: 42px;
         }
 
-        /* Кнопки управления */
         .actions-row {
             display: flex;
             gap: 16px;
@@ -231,13 +225,11 @@
             flex: 1;
         }
 
-        /* Заглушка, если анкет нет */
         .no-profiles {
             text-align: center;
             margin: auto;
         }
 
-        /* Навигационная панель снизу (появляется после регистрации) */
         .nav-bar {
             display: none;
             position: fixed;
@@ -415,9 +407,11 @@
         tg.expand();
         tg.ready();
 
-        const currentUser = tg.initDataUnsafe?.user || { id: 0, username: "test_gamer", first_name: "Игрок" };
+        // АДРЕС ТВOЕГО ЛOКАЛЬНOГO СЕРВЕРА PYTHON
+        const SERVER_URL = "http://127.0.0.1:8000"; 
 
-        // Главный объект, где хранятся настройки пользователя по КАЖДОЙ игре по отдельности
+        const currentUser = tg.initDataUnsafe?.user || { id: 1234567, username: "test_gamer", first_name: "Игрок" };
+
         let myLocalData = {
             display_name: "",
             games_data: {
@@ -428,7 +422,6 @@
             }
         };
 
-        // Фейковая база данных других игроков для ленты
         let mockDatabase = [
             { id: 101, display_name: "S1mple_Fan", username: "cs_pro_player", game: "CS 2", rank: "Элита-Глобал", voice: "Да, Discord/ТГ", about: "Ищу жесткого плюс один в напарники на фейсит." },
             { id: 102, display_name: "Dendi_Fan", username: "mid_or_feed", game: "Dota 2", rank: "5300 MMR", voice: "Да, Discord/ТГ", about: "Ищу адекватного керри, чтобы выигрывать линию." },
@@ -438,12 +431,10 @@
 
         let currentProfileIndex = 0;
 
-        // Отслеживание смены игры на экране редактирования
         document.getElementById('editGameSelect').addEventListener('change', function() {
             loadGameDataToEditForm(this.value);
         });
 
-        // Загрузка данных конкретной игры в форму редактирования
         function loadGameDataToEditForm(gameName) {
             const gameData = myLocalData.games_data[gameName];
             document.getElementById('editRankInput').value = gameData.rank;
@@ -451,31 +442,55 @@
             document.getElementById('editAboutInput').value = gameData.about;
         }
 
+        // ФУНКЦИЯ ОТПРАВКИ ДАННЫХ ИЗ САЙТА В PYTHON-СЕРВЕР
+        async function sendProfileToServer(chosenGame) {
+            const profileData = {
+                tg_id: currentUser.id,
+                username: currentUser.username || "no_username",
+                display_name: myLocalData.display_name,
+                game: chosenGame,
+                rank: myLocalData.games_data[chosenGame].rank,
+                voice: myLocalData.games_data[chosenGame].voice,
+                about: myLocalData.games_data[chosenGame].about
+            };
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/save_profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(profileData)
+                });
+                const result = await response.json();
+                console.log("Ответ от базы данных через бэкенд:", result);
+            } catch (error) {
+                console.error("Не удалось отправить данные на сервер:", error);
+            }
+        }
+
         // ПЕРВАЯ РЕГИСТРАЦИЯ
         function submitRegistration() {
             const nick = document.getElementById('regNickname').value.trim();
             if(!nick) {
-                tg.showAlert("Пожалуйста, введите свой никнейм!");
+                alert("Пожалуйста, введите свой никнейм!");
                 return;
             }
 
             const chosenGame = document.getElementById('gameSelect').value;
 
-            // Записываем глобальный ник
             myLocalData.display_name = nick;
-            // Записываем данные первой заполненной игры
             myLocalData.games_data[chosenGame] = {
                 rank: document.getElementById('rankInput').value || "Без ранга",
                 voice: document.getElementById('voiceSelect').value,
                 about: document.getElementById('aboutInput').value || "Го играть!"
             };
 
-            // Синхронизируем значения с экраном редактирования профиля
+            // Отправляем данные в базу PostgreSQL через сервер
+            sendProfileToServer(chosenGame);
+
             document.getElementById('editNickname').value = myLocalData.display_name;
             loadGameDataToEditForm(chosenGame);
             document.getElementById('editGameSelect').value = chosenGame;
 
-            // Скрываем регистрацию, включаем ленту и нижнее меню
             document.getElementById('registrationScreen').classList.remove('active');
             document.getElementById('feedScreen').classList.add('active');
             document.getElementById('appNavBar').style.display = 'flex';
@@ -488,13 +503,12 @@
         function saveProfileChanges() {
             const newNick = document.getElementById('editNickname').value.trim();
             if(!newNick) {
-                tg.showAlert("Никнейм не может быть пустым!");
+                alert("Никнейм не может быть пустым!");
                 return;
             }
 
             const activeGame = document.getElementById('editGameSelect').value;
 
-            // Обновляем ник и данные конкретной выбранной игры
             myLocalData.display_name = newNick;
             myLocalData.games_data[activeGame] = {
                 rank: document.getElementById('editRankInput').value || "Без ранга",
@@ -502,13 +516,13 @@
                 about: document.getElementById('editAboutInput').value || "Го играть!"
             };
 
-            tg.showAlert(`Профиль и данные для ${activeGame} успешно сохранены!`);
-            
-            // Возвращаем пользователя на экран ленты
+            // Отправляем обновленные данные на сервер
+            sendProfileToServer(activeGame);
+
+            console.log(`Профиль и данные для ${activeGame} успешно сохранены!`);
             switchTab('feed');
         }
 
-        // ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК МЕНЮ
         function switchTab(tab) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -521,12 +535,10 @@
                 document.getElementById('profileScreen').classList.add('active');
                 document.getElementById('navProfileBtn').classList.add('active');
                 document.getElementById('headerSubtitle').innerText = "Настройка профиля по играм";
-                // Обновляем форму при заходе на вкладку
                 loadGameDataToEditForm(document.getElementById('editGameSelect').value);
             }
         }
 
-        // ОТОБРАЖЕНИЕ КАРТОЧЕК
         function renderCurrentProfile() {
             if (currentProfileIndex >= mockDatabase.length) {
                 document.getElementById('playerCard').style.display = 'none';
@@ -545,12 +557,11 @@
             document.getElementById('cardAbout').innerText = profile.about;
         }
 
-        // ЛАЙК / ДИЗЛАЙК
         function handleSwipe(action) {
             const currentProfile = mockDatabase[currentProfileIndex];
             
             if (action === 'like') {
-                tg.showAlert(`Вы лайкнули игрока ${currentProfile.display_name} (@${currentProfile.username}) в игре ${currentProfile.game}!`);
+                console.log(`Вы лайкнули игрока ${currentProfile.display_name} (@${currentProfile.username})`);
             }
 
             currentProfileIndex++;
