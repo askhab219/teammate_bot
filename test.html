@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тиммейт Поиск</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--tg-theme-bg-color, #18181b);
+            color: var(--tg-theme-text-color, #ffffff);
+            margin: 0; padding: 16px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .screen { display: none; width: 100%; max-width: 340px; }
+        .active { display: block; }
+        
+        /* Стили формы */
+        .form-group { margin-bottom: 16px; text-align: left; }
+        label { display: block; margin-bottom: 6px; color: var(--tg-theme-hint-color, #a1a1aa); }
+        select, input {
+            width: 100%; padding: 12px; border-radius: 8px; 
+            border: 1px solid #3f3f46; background: #27272a; color: white;
+            box-sizing: border-box;
+        }
+        
+        /* Стили карточки */
+        .card {
+            background-color: var(--tg-theme-secondary-bg-color, #27272a);
+            border-radius: 16px; padding: 20px; text-align: center; border: 1px solid #3f3f46;
+        }
+        .avatar { width: 80px; height: 80px; background: #6366f1; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .buttons { display: flex; gap: 12px; margin-top: 20px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-main { background-color: var(--tg-theme-button-color, #22c55e); color: var(--tg-theme-button-text-color, #fff); width: 100%; }
+        .btn-skip { background-color: #ef4444; color: white; }
+        .btn-like { background-color: #22c55e; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="regScreen" class="screen active">
+        <h2>Создай профиль</h2>
+        <div class="form-group">
+            <label>Твоя игра</label>
+            <select id="regGame">
+                <option value="CS 2">CS 2</option>
+                <option value="Dota 2">Dota 2</option>
+                <option value="Valorant">Valorant</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Твой ранг/звание</label>
+            <input type="text" id="regRank" placeholder="Например: Калаш / 4000 ММР">
+        </div>
+        <button class="btn-main" onclick="registerUser()">Сохранить и искать</button>
+    </div>
+
+    <div id="searchScreen" class="screen">
+        <h2 style="color: var(--tg-theme-hint-color);">Напарники для тебя</h2>
+        <div class="card">
+            <div class="avatar">🎮</div>
+            <h3 id="playerNick" style="margin: 0 0 10px 0;">Загрузка...</h3>
+            <p id="playerGameInfo" style="margin: 0; color: #a1a1aa;"></p>
+            <div class="buttons">
+                <button class="btn-skip" onclick="handleAction('skip')">Пропустить</button>
+                <button class="btn-like" onclick="handleAction('like')">Лайк</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Получаем данные самого пользователя из Telegram
+        const tgUser = tg.initDataUnsafe?.user;
+        const tgId = tgUser ? tgUser.id : 12345; // Для тестов в браузере, если зашли не из ТГ
+        const tgName = tgUser ? (tgUser.username || tgUser.first_name) : "Тестовый Юзер";
+
+        // URL твоего будущего бэкэнда (куда слать запросы)
+        const BACKEND_URL = "https://your-backend-api.com"; 
+
+        // 1. РЕГИСТРАЦИЯ (Отправка данных на сервер)
+        async function registerUser() {
+            const game = document.getElementById('regGame').value;
+            const rank = document.getElementById('regRank').value;
+
+            const profileData = {
+                tg_id: tgId,
+                username: tgName,
+                game: game,
+                rank: rank
+            };
+
+            console.log("Отправка профиля:", profileData);
+
+            // В реальности тут будет отправка на сервер:
+            /*
+            await fetch(`${BACKEND_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profileData)
+            });
+            */
+
+            // Переключаем экран на поиск и загружаем игроков
+            document.getElementById('regScreen').classList.remove('active');
+            document.getElementById('searchScreen').classList.add('active');
+            loadFeed();
+        }
+
+        // 2. ПОЛУЧЕНИЕ ИГРОКОВ С СЕРВЕРА
+        let currentFeed = [];
+        
+        async function loadFeed() {
+            console.log("Запрашиваем анкетную ленту для ID:", tgId);
+            
+            // Заглушка, имитирующая ответ сервера (базы данных)
+            currentFeed = [
+                { tg_id: 222, username: "S1mple_Fan", game: "CS 2", rank: "Глобал" },
+                { tg_id: 333, username: "DotaMaster", game: "Dota 2", rank: "Божество" }
+            ];
+
+            /* Реальный запрос к бэкенду:
+            const response = await fetch(`${BACKEND_URL}/get-players?tg_id=${tgId}`);
+            currentFeed = await response.json();
+            */
+
+            showNextPlayer();
+        }
+
+        function showNextPlayer() {
+            if (currentFeed.length === 0) {
+                document.getElementById('searchScreen').innerHTML = "<h3>Игроки закончились!</h3>";
+                return;
+            }
+            const player = currentFeed.shift();
+            document.getElementById('playerNick').innerText = "@" + player.username;
+            document.getElementById('playerGameInfo').innerText = `${player.game} • ${player.rank}`;
+        }
+
+        function handleAction(action) {
+            console.log(`Пользователь ${tgId} сделал действие: ${action}`);
+            // Тут отправляется запрос на сервер (например, если лайк — сервер проверяет взаимность)
+            showNextPlayer();
+        }
+    </script>
+</body>
+</html>
