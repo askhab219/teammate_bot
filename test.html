@@ -3,148 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тиммейт Поиск</title>
+    <title>Teammate Finder WebApp</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--tg-theme-bg-color, #18181b);
-            color: var(--tg-theme-text-color, #ffffff);
-            margin: 0; padding: 16px;
-            display: flex; flex-direction: column; align-items: center;
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #131316);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #1c1c21);
+            --text-color: var(--tg-theme-text-color, #ffffff);
+            --hint-color: var(--tg-theme-hint-color, #71717a);
+            --button-color: var(--tg-theme-button-color, #5865f2);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+            --border-color: #2e2e38;
         }
-        .screen { display: none; width: 100%; max-width: 340px; }
-        .active { display: block; }
-        
-        /* Стили формы */
-        .form-group { margin-bottom: 16px; text-align: left; }
-        label { display: block; margin-bottom: 6px; color: var(--tg-theme-hint-color, #a1a1aa); }
-        select, input {
-            width: 100%; padding: 12px; border-radius: 8px; 
-            border: 1px solid #3f3f46; background: #27272a; color: white;
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
             box-sizing: border-box;
         }
-        
-        /* Стили карточки */
-        .card {
-            background-color: var(--tg-theme-secondary-bg-color, #27272a);
-            border-radius: 16px; padding: 20px; text-align: center; border: 1px solid #3f3f46;
+
+        /* Контейнер приложения */
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
         }
-        .avatar { width: 80px; height: 80px; background: #6366f1; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-        .buttons { display: flex; gap: 12px; margin-top: 20px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .btn-main { background-color: var(--tg-theme-button-color, #22c55e); color: var(--tg-theme-button-text-color, #fff); width: 100%; }
-        .btn-skip { background-color: #ef4444; color: white; }
-        .btn-like { background-color: #22c55e; color: white; }
+
+        /* Шапка */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            margin: 0 0 4px 0;
+            font-weight: 800;
+            background: linear-gradient(45deg, #5865f2, #9b5de5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: var(--hint-color);
+            margin: 0;
+        }
+
+        /* Экраны */
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Элементы форм (Экран Регистрации) */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-color);
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--button-color);
+        }
+
+        /* Карточка игрока (Экран Поиска) */
+        .card-wrapper {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .player-card {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            width: 100%;
+            padding: 24px;
+            box-sizing: border-box;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .card-avatar {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #5865f2, #a855f7);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+        }
+
+        .card-username {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .badge.primary {
+            background-color: rgba(88, 101, 242, 0.15);
+            border-color: var(--button-color);
+            color: #8c96ff;
+        }
+
+        .card-about {
+            font-size: 14px;
+            color: var(--hint-color);
+            line-height: 1.5;
+            margin: 0;
+            min-height: 42px;
+        }
+
+        /* Кнопки управления */
+        .actions-row {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+        }
+
+        button {
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: transform 0.1s, filter 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        .btn-submit {
+            background-color: var(--button-color);
+            color: var(--button-text);
+            width: 100%;
+            margin-top: auto;
+        }
+
+        .btn-dislike {
+            background-color: #f43f5e;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-like {
+            background-color: #10b981;
+            color: white;
+            flex: 1;
+        }
+
+        /* Заглушка, если анкет нет */
+        .no-profiles {
+            text-align: center;
+            margin: auto;
+        }
+        .no-profiles icon { font-size: 48px; display: block; margin-bottom: 16px; }
     </style>
 </head>
 <body>
 
-    <div id="regScreen" class="screen active">
-        <h2>Создай профиль</h2>
-        <div class="form-group">
-            <label>Твоя игра</label>
-            <select id="regGame">
-                <option value="CS 2">CS 2</option>
-                <option value="Dota 2">Dota 2</option>
-                <option value="Valorant">Valorant</option>
-            </select>
+    <div class="app-container">
+        
+        <div class="header">
+            <h1>TEAMMATE MATCH</h1>
+            <p id="headerSubtitle">Найди идеального напарника для катки</p>
         </div>
-        <div class="form-group">
-            <label>Твой ранг/звание</label>
-            <input type="text" id="regRank" placeholder="Например: Калаш / 4000 ММР">
-        </div>
-        <button class="btn-main" onclick="registerUser()">Сохранить и искать</button>
-    </div>
 
-    <div id="searchScreen" class="screen">
-        <h2 style="color: var(--tg-theme-hint-color);">Напарники для тебя</h2>
-        <div class="card">
-            <div class="avatar">🎮</div>
-            <h3 id="playerNick" style="margin: 0 0 10px 0;">Загрузка...</h3>
-            <p id="playerGameInfo" style="margin: 0; color: #a1a1aa;"></p>
-            <div class="buttons">
-                <button class="btn-skip" onclick="handleAction('skip')">Пропустить</button>
-                <button class="btn-like" onclick="handleAction('like')">Лайк</button>
+        <div id="registrationScreen" class="screen active">
+            <div class="form-group">
+                <label for="gameSelect">Выберите основную игру</label>
+                <select id="gameSelect">
+                    <option value="CS 2">Counter-Strike 2</option>
+                    <option value="Dota 2">Dota 2</option>
+                    <option value="Valorant">Valorant</option>
+                    <option value="Apex Legends">Apex Legends</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="rankInput">Ваш текущий ранг / MMR</label>
+                <input type="text" id="rankInput" placeholder="Например: Калаш, Алмаз 2, 4500 MMR" maxlength="30">
+            </div>
+
+            <div class="form-group">
+                <label for="voiceSelect">Наличие микрофона и связи</label>
+                <select id="voiceSelect">
+                    <option value="Да, Discord/ТГ">Да, Discord / ТГ 🎙️</option>
+                    <option value="Только внутриигровой">Только внутри игры 🎧</option>
+                    <option value="Без микрофона">Без микрофона 🚫</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="aboutInput">О себе (какое инфо важно напарнику?)</label>
+                <textarea id="aboutInput" rows="3" placeholder="Ищу адекватных ребят для фана/ап ранка. Не токсик, играю по вечерам..." maxlength="150"></textarea>
+            </div>
+
+            <button class="btn-submit" onclick="submitRegistration()">Зарегистрироваться и искать</button>
+        </div>
+
+        <div id="feedScreen" class="screen">
+            <div class="card-wrapper">
+                
+                <div class="player-card" id="playerCard">
+                    <div class="card-avatar">🎮</div>
+                    <h2 class="card-username" id="cardUsername">@loading</h2>
+                    
+                    <div class="tags-container">
+                        <span class="badge primary" id="cardGame">Игра</span>
+                        <span class="badge" id="cardRank">Ранг</span>
+                        <span class="badge" id="cardVoice">Связь</span>
+                    </div>
+                    
+                    <p class="card-about" id="cardAbout">Загрузка информации профиля...</p>
+                </div>
+
+                <div class="no-profiles" id="noProfiles" style="display: none;">
+                    <span>✨</span>
+                    <h3>Все анкеты просмотрены!</h3>
+                    <p style="color: var(--hint-color); font-size: 14px;">Попробуйте зайти позже или изменить настройки.</p>
+                </div>
+
+            </div>
+
+            <div class="actions-row" id="actionButtons">
+                <button class="btn-dislike" onclick="handleSwipe('skip')">✖ Пропустить</button>
+                <button class="btn-like" onclick="handleSwipe('like')">❤ Играть!</button>
             </div>
         </div>
+
     </div>
 
     <script>
+        // 1. Инициализация Telegram WebApp API
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        tg.expand(); // Открываем приложение на весь экран телефона
+        tg.ready();
 
-        // Получаем данные самого пользователя из Telegram
-        const tgUser = tg.initDataUnsafe?.user;
-        const tgId = tgUser ? tgUser.id : 12345; // Для тестов в браузере, если зашли не из ТГ
-        const tgName = tgUser ? (tgUser.username || tgUser.first_name) : "Тестовый Юзер";
+        // Данные текущего пользователя из самого мессенджера
+        const currentUser = tg.initDataUnsafe?.user || { id: 0, username: "test_gamer", first_name: "Игрок" };
 
-        // URL твоего будущего бэкэнда (куда слать запросы)
-        const BACKEND_URL = "https://your-backend-api.com"; 
+        // Имитация базы данных (серверного ответа) с другими игроками
+        let mockDatabase = [
+            { id: 101, username: "S1mple_Style", game: "CS 2", rank: "Элита-Глобал", voice: "Да, Discord/ТГ", about: "Ищу жесткого плюс один в напарники на фейсит. 2500 эло." },
+            { id: 102, username: "Dendi_Fan", game: "Dota 2", rank: "5300 MMR", voice: "Да, Discord/ТГ", about: "Играю на 4/5 позиции. Ищу адекватного керри, чтобы выигрывать линию." },
+            { id: 103, username: "Jett_Main", game: "Valorant", rank: "Алмаз 3", voice: "Только внутриигровой", about: "Катаю по фану после работы. Без криков и тильта, плз." },
+            { id: 104, username: "Apex_Wraith", game: "Apex Legends", rank: "Платина", voice: "Без микрофона", about: "Даю хорошие маркеры в игре. Ищу пати для рейтинга." }
+        ];
 
-        // 1. РЕГИСТРАЦИЯ (Отправка данных на сервер)
-        async function registerUser() {
-            const game = document.getElementById('regGame').value;
-            const rank = document.getElementById('regRank').value;
+        let currentProfileIndex = 0;
 
-            const profileData = {
-                tg_id: tgId,
-                username: tgName,
-                game: game,
-                rank: rank
+        // 2. Логика переключения экранов и регистрации
+        async function submitRegistration() {
+            // Собираем данные из формы
+            const userProfile = {
+                tg_id: currentUser.id,
+                username: currentUser.username || currentUser.first_name,
+                game: document.getElementById('gameSelect').value,
+                rank: document.getElementById('rankInput').value || "Без ранга",
+                voice: document.getElementById('voiceSelect').value,
+                about: document.getElementById('aboutInput').value || "Всем привет, го играть!"
             };
 
-            console.log("Отправка профиля:", profileData);
-
-            // В реальности тут будет отправка на сервер:
-            /*
-            await fetch(`${BACKEND_URL}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(profileData)
-            });
-            */
-
-            // Переключаем экран на поиск и загружаем игроков
-            document.getElementById('regScreen').classList.remove('active');
-            document.getElementById('searchScreen').classList.add('active');
-            loadFeed();
-        }
-
-        // 2. ПОЛУЧЕНИЕ ИГРОКОВ С СЕРВЕРА
-        let currentFeed = [];
-        
-        async function loadFeed() {
-            console.log("Запрашиваем анкетную ленту для ID:", tgId);
+            console.log("Регистрация успешна:", userProfile);
             
-            // Заглушка, имитирующая ответ сервера (базы данных)
-            currentFeed = [
-                { tg_id: 222, username: "S1mple_Fan", game: "CS 2", rank: "Глобал" },
-                { tg_id: 333, username: "DotaMaster", game: "Dota 2", rank: "Божество" }
-            ];
-
-            /* Реальный запрос к бэкенду:
-            const response = await fetch(`${BACKEND_URL}/get-players?tg_id=${tgId}`);
-            currentFeed = await response.json();
+            /* В РЕАЛЬНОМ ПРОЕКТЕ здесь должен быть запрос к твоему бэкенду (FastAPI / Node.js):
+              await fetch('https://your-backend.com/api/register', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify(userProfile)
+              });
             */
 
-            showNextPlayer();
+            // Переключаем экраны
+            document.getElementById('registrationScreen').classList.remove('active');
+            document.getElementById('feedScreen').classList.add('active');
+            document.getElementById('headerSubtitle').innerText = "Свайпай карточки игроков";
+
+            // Загружаем анкетную ленту
+            renderCurrentProfile();
         }
 
-        function showNextPlayer() {
-            if (currentFeed.length === 0) {
-                document.getElementById('searchScreen').innerHTML = "<h3>Игроки закончились!</h3>";
+        // 3. Логика отображения анкет в ленте
+        function renderCurrentProfile() {
+            if (currentProfileIndex >= mockDatabase.length) {
+                // Если анкеты кончились — скрываем карточку и кнопки, показываем заглушку
+                document.getElementById('playerCard').style.display = 'none';
+                document.getElementById('actionButtons').style.display = 'none';
+                document.getElementById('noProfiles').style.display = 'block';
                 return;
             }
-            const player = currentFeed.shift();
-            document.getElementById('playerNick').innerText = "@" + player.username;
-            document.getElementById('playerGameInfo').innerText = `${player.game} • ${player.rank}`;
+
+            const profile = mockDatabase[currentProfileIndex];
+            
+            document.getElementById('cardUsername').innerText = "@" + profile.username;
+            document.getElementById('cardGame').innerText = profile.game;
+            document.getElementById('cardRank').innerText = profile.rank;
+            document.getElementById('cardVoice').innerText = profile.voice;
+            document.getElementById('cardAbout').innerText = profile.about;
         }
 
-        function handleAction(action) {
-            console.log(`Пользователь ${tgId} сделал действие: ${action}`);
-            // Тут отправляется запрос на сервер (например, если лайк — сервер проверяет взаимность)
-            showNextPlayer();
+        // 4. Логика обработки кликов по кнопкам (Свайпы)
+        function handleSwipe(action) {
+            const currentProfile = mockDatabase[currentProfileIndex];
+            console.log(`Пользователь совершил действие [${action}] над игроком ${currentProfile.username}`);
+
+            if (action === 'like') {
+                // Если это реальный лайк, можно отправить событие обратно в ТГ-боту
+                // tg.sendData(JSON.stringify({type: "match_like", target_id: currentProfile.id}));
+                
+                // Для наглядности покажем всплывающее окно самого Telegram
+                tg.showAlert(`Вы лайкнули @${currentProfile.username}! Если это взаимно, бот свяжет вас.`);
+            }
+
+            // Переходим к следующему игроку
+            currentProfileIndex++;
+            renderCurrentProfile();
         }
     </script>
 </body>
