@@ -484,19 +484,36 @@
                 about: document.getElementById('aboutInput').value || "Го играть!"
             };
 
-            // Отправляем данные в базу PostgreSQL через сервер
-            sendProfileToServer(chosenGame);
+            // ФУНКЦИЯ ОТПРАВКИ ДАННЫХ ИЗ САЙТА В PYTHON-СЕРВЕР
+        async function sendProfileToServer(chosenGame) {
+            const profileData = {
+                tg_id: currentUser.id,
+                username: currentUser.username || "no_username",
+                display_name: myLocalData.display_name,
+                game: chosenGame,
+                rank: myLocalData.games_data[chosenGame].rank,
+                voice: myLocalData.games_data[chosenGame].voice,
+                about: myLocalData.games_data[chosenGame].about
+            };
 
-            document.getElementById('editNickname').value = myLocalData.display_name;
-            loadGameDataToEditForm(chosenGame);
-            document.getElementById('editGameSelect').value = chosenGame;
-
-            document.getElementById('registrationScreen').classList.remove('active');
-            document.getElementById('feedScreen').classList.add('active');
-            document.getElementById('appNavBar').style.display = 'flex';
-            document.getElementById('headerSubtitle').innerText = "Свайпай карточки игроков";
-
-            renderCurrentProfile();
+            try {
+                const response = await fetch(`${SERVER_URL}/api/save_profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(profileData)
+                });
+                const result = await response.json();
+                
+                // Если сервер вернул ошибку (например, 500), выводим её точный текст
+                if (!response.ok) {
+                    alert("Ошибка сервера: " + (result.detail || "Неизвестная ошибка"));
+                } else {
+                    console.log("Ответ от базы данных через бэкенд:", result);
+                }
+            } catch (error) {
+                console.error("Не удалось отправить данные на сервер:", error);
+                alert("Не удалось связаться с сервером!");
+            }
         }
 
         // СОХРАНЕНИЕ ИЗМЕНЕНИЙ В ПРОФИЛЕ
